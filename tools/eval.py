@@ -258,8 +258,20 @@ if __name__ == "__main__":
     if not args.experiment_name:
         args.experiment_name = exp.exp_name
 
-    num_gpu = torch.cuda.device_count() if args.devices is None else args.devices
-    assert num_gpu <= torch.cuda.device_count()
+    visible_gpus = torch.cuda.device_count()
+    num_gpu = visible_gpus if args.devices is None else args.devices
+    if visible_gpus < 1:
+        raise RuntimeError(
+            "No CUDA devices are visible to PyTorch. Check the container runtime, "
+            "`CUDA_VISIBLE_DEVICES`, and that the host GPU is exposed to the container."
+        )
+    if num_gpu < 1:
+        raise ValueError("--devices must be at least 1.")
+    if num_gpu > visible_gpus:
+        raise ValueError(
+            f"Requested {num_gpu} devices, but PyTorch can only see {visible_gpus}. "
+            "Use a smaller `-d/--devices` value or expose more GPUs to the container."
+        )
 
     if args.workers is not None:
         exp.data_num_workers = args.workers

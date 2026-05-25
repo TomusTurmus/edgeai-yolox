@@ -11,7 +11,8 @@ This repository is a fork of [YOLOX](https://github.com/Megvii-BaseDetection/YOL
 
 #### Step2. Install [pycocotools](https://github.com/cocodataset/cocoapi).
 ```
-pip3 install cython; pip3 install 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
+pip3 install cython numpy
+pip3 install --no-build-isolation 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
 ```
 
 ### Tasks supported

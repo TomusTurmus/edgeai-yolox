@@ -31,7 +31,13 @@
 ######################################################################
 
 # system packages
-sudo apt-get install -y libjpeg-dev zlib1g-dev cmake libffi-dev protobuf-compiler
+if command -v sudo >/dev/null 2>&1; then
+	SUDO=sudo
+else
+	SUDO=
+fi
+
+$SUDO apt-get install -y libjpeg-dev zlib1g-dev cmake libffi-dev protobuf-compiler
 
 ######################################################################
 # upgrade pip
@@ -44,7 +50,7 @@ pip3 install --no-input torch==2.0.1+cu118 torchvision==0.15.2+cu118 -f https://
 echo 'Installing python packages...'
 # there as issue with installing pillow-simd through requirements - force it here
 pip uninstall --yes pillow
-pip install --no-input -U --force-reinstall pillow-simd
+pip install --no-input --no-build-isolation -U --force-reinstall pillow-simd
 pip3 install --no-input cython wheel numpy==1.23.0
 pip3 install --no-input torchinfo pycocotools opencv-python
 
@@ -61,5 +67,5 @@ pip3 install --no-input protobuf==3.20.2 onnx==1.13.0
 
 ######################################################################
 echo 'installing the python package...'
-python3 setup.py develop
+pip3 install --no-input --no-build-isolation .
 
