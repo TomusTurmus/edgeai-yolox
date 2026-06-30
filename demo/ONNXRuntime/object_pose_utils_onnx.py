@@ -297,16 +297,11 @@ def draw_obj_pose(origin_img, dets, class_names, class_to_cuboid, camera_matrix,
             r1, r2 = det[6:9, None], det[9:12, None]
             r3 = np.cross(r1, r2, axis=0)
             rotation_mat = np.concatenate((r1, r2, r3), axis=1)
-            translation_vec = det[12:15]
-            tx = translation_vec[0]
-            ty = translation_vec[1]
-            tz = translation_vec[2]
-            x = camera_matrix[0,2] + camera_matrix[0,0] *tx/tz
-            y = camera_matrix[1,2] + camera_matrix[1,1] *ty/tz
-            X = (x - logitech_camera_matrix_resize[0,2])*tz/logitech_camera_matrix_resize[0,0]
-            Y = (y - logitech_camera_matrix_resize[1,2])*tz/logitech_camera_matrix_resize[1,1]
-            translation_vec[0] = X
-            translation_vec[1] = Y
+            # translation_vec is the model output, already back-projected with the
+            # intrinsics baked into the ONNX (real K if patched). Do NOT mutate dets
+            # and do NOT do the legacy logitech reproject hack: project the cuboid
+            # with the same camera_matrix so drawing stays consistent with the model.
+            translation_vec = det[12:15].copy()
             cuboid_corners_2d = project_3d_2d(class_to_cuboid[int(cls)], rotation_mat, translation_vec, camera_matrix)
             draw_cuboid_2d(img=origin_img, cuboid_corners=cuboid_corners_2d, color=color)
 

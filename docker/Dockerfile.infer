@@ -1,0 +1,62 @@
+# Inference image for THIS repo (edgeai-yolox), 2D object detection on custom images.
+#
+# Unlike docker/Dockerfile (which clones upstream Megvii YOLOX), this image only
+# builds the dependency environment. The repo itself is bind-mounted at runtime,
+# so code stays editable and you never rebuild to swap images/weights.
+#
+# Pinned torch 2.0.1+cu118 on purpose: torch >= 2.6 defaults torch.load(weights_only=True),
+# which breaks loading the YOLOX checkpoint (ckpt["model"]).
+#
+# Build:  see RUN_INFERENCE.md (repo root)
+ARG BASE_IMAGE=nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+FROM ${BASE_IMAGE}
+
+ARG TORCH_INDEX_URL=https://download.pytorch.org/whl/cu118
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PIP_NO_CACHE_DIR=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    curl \
+    git \
+    libffi-dev \
+    libjpeg-dev \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    protobuf-compiler \
+    pkg-config \
+    zlib1g-dev \
+    python3 \
+    python3-dev \
+    python3-pip \
+    python3-setuptools \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python3 -m pip install --upgrade pip setuptools wheel
+RUN python3 -m pip install --no-cache-dir \
+    torch==2.0.1+cu118 torchvision==0.15.2+cu118 \
+    --index-url ${TORCH_INDEX_URL}
+
+# Only requirements.txt is copied so this layer caches independently of code changes.
+# The repo itself is bind-mounted at /workspace/edgeai-yolox when you run the container.
+COPY requirements.txt /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir -r /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir cython pycocotools ninja
+# NOTE: mmcv-full is NOT installed — not needed for 2D-OD inference. If a future
+# task needs it, add:
+#   pip install --no-build-isolation mmcv-full==1.4.8 \
+#     -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.0.1/index.html
+
+ENV PYTHONUNBUFFERED=1
+ENV YOLOX_HOME=/workspace/edgeai-yolox
+ENV PYTHONPATH=/workspace/edgeai-yolox
+WORKDIR /workspace/edgeai-yolox
+
+CMD ["bash"]

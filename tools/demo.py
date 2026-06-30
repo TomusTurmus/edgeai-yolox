@@ -131,7 +131,7 @@ class Predictor(object):
         self.preproc = ValTransform(legacy=legacy)
         self.task = task
         self.data_set = data_set
-        self.cad_models = model.head.cad_models
+        self.cad_models = getattr(model.head, "cad_models", None)
         if trt_file is not None:
             from torch2trt import TRTModule
 

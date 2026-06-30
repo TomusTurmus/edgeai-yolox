@@ -57,6 +57,14 @@ def make_parser():
         help="Specify an input shape for inference.",
     )
     parser.add_argument(
+        "--camera",
+        type=str,
+        default=None,
+        help="Optional camera JSON {fx,fy,cx,cy,width,height} with NATIVE intrinsics. "
+             "Used to draw the cuboid with real intrinsics (scaled to input-shape). "
+             "Match this with a model patched by tools/patch_pose_intrinsics.py.",
+    )
+    parser.add_argument(
         "--save-txt",
         action="store_true",
         help="Whether to write the output ",
@@ -128,14 +136,22 @@ if __name__ == '__main__':
                     break
             else:
                 class_to_cuboid = get_cuboid_corner(dataset=args.dataset)
-                camera_matrix = get_camera_matrix(dataset=args.dataset)
+                if args.camera is not None:
+                    import json
+                    cam = json.load(open(args.camera))
+                    sx, sy = input_shape[0] / cam["width"], input_shape[1] / cam["height"]
+                    camera_matrix = np.array([[cam["fx"] * sx, 0, cam["cx"] * sx],
+                                              [0, cam["fy"] * sy, cam["cy"] * sy],
+                                              [0, 0, 1]], dtype=np.float32)
+                else:
+                    camera_matrix = get_camera_matrix(dataset=args.dataset)
                 class_names = get_class_names(dataset=args.dataset)
                 dets = output[0]
                 img_2d_od = copy.deepcopy(origin_img)
 
                 if dets is not None:
-                    draw_bbox_2d(img_2d_od, dets, class_names)
-                    draw_obj_pose(origin_img, dets, class_names=class_names, class_to_cuboid=class_to_cuboid, camera_matrix=camera_matrix)
+                    draw_bbox_2d(img_2d_od, dets, class_names, conf_thres=args.score_thr)
+                    draw_obj_pose(origin_img, dets, class_names=class_names, class_to_cuboid=class_to_cuboid, camera_matrix=camera_matrix, conf_thres=args.score_thr)
                 os.makedirs(args.output_dir, exist_ok=True)
                 output_path_cuboid = os.path.join(args.output_dir, image_path.split("/")[-1])
                 cv2.imwrite(output_path_cuboid, origin_img)
